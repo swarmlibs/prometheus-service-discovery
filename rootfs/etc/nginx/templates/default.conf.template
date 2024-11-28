@@ -1,0 +1,25 @@
+upstream docker {
+    server unix:/var/run/docker.sock;
+}
+
+server {
+    listen       9093;
+    server_name  ${HOSTNAME};
+
+    # Only allow these request methods and do not accept POST, DELETE and other methods
+    add_header Allow "OPTIONS, GET, HEAD" always;
+    if ( $request_method !~ ^(OPTIONS|GET|HEAD)$ ) {
+        return 405;
+    }
+
+    # Deny access to sensitive parts of the API
+    location ~* /(.*)/(configs|distribution|exec|plugins|secrets|session|swarm|volumes)(.*) {
+        deny all;
+        return 403;
+    }
+
+    # Proxy all requests to the Docker daemon
+    location / {
+        proxy_pass http://docker/;
+    }
+}
